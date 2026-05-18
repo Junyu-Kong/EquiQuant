@@ -16,6 +16,8 @@ import modelopt.torch.opt as mto
 from ..aqt.utils.common import seed_everything, cleanup_memory
 from ..utils.global_args import GlobalConfig
 from ..modules.quantizer import LLMCompressorQuantizer
+from .server import VllmServer
+from .bencher import AisBencher
 
 SEED = 42
 seed_everything(SEED)
