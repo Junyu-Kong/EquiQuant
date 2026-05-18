@@ -32,6 +32,9 @@ class ModelOptimizerQuantizer():
         self.device = self.quant_config['device']
         self.visible_devices = self.quant_config['visible_devices']
 
+        self.vllm_cnfig = config.raw_config["vllm_server"]
+        self.evaluation_config = config.raw_config["evaluation"]
+
     
     def run(self):
         """
@@ -39,7 +42,7 @@ class ModelOptimizerQuantizer():
         """
         best_recipe = self._get_best_config()
         cleanup_memory()
-        
+
         w8a8_default = []
         for key, value in best_recipe.items():
             layer_name = "*" + ".".join(key.split(".")[:-1]) + "*"
@@ -55,7 +58,27 @@ class ModelOptimizerQuantizer():
         with open(hybrid_quant_schema_re_path, "w", encoding="utf-8") as f:
             json.dump(hybrid_quant_schema_re, f, indent=4)
         
-        self._compress_model(hybrid_quant_schema_path, hybrid_quant_schema_re_path)
+        quantized_model_path = self._compress_model(hybrid_quant_schema_path, hybrid_quant_schema_re_path)
+
+        vllm_log_path = self.base_dir / "vllm_server.log"
+        server = VllmServer(
+            model_path=quantized_model_path,
+            server_config=self.vllm_cnfig,
+            log_file_path=vllm_log_path,
+        )
+
+        if not server.start():
+            logger.error("VLLM failed to start. Stopping.")
+            exit()
+
+        bencher = AisBencher(
+            eval_config=self.evaluation_config,
+            server_config=self.vllm_cnfig,
+            quantized_model_path=quantized_model_path,
+            current_run_dir=str(self.base_dir),
+            run_id=0,
+        )
+        self.last_results = bencher.run(early_stop_fn=lambda alias, acc: True)
     
     def _generate_schema(self, w8a8_default):
         hybrid_quant_schema = {
@@ -160,6 +183,7 @@ class ModelOptimizerQuantizer():
 
         quantized_model_path = quantizer.run()
         print(f"Quantized model path: {quantized_model_path}")
+        return quantized_model_path
 
     def _get_best_config(self) -> Dict:
         """
