@@ -29,7 +29,7 @@ class ModelOptimizerQuantizer():
         self.base_dir = Path(config.raw_config["workspace"]["base_dir"])
         self.export_path = self.base_dir / config.raw_config["workspace"]["best_weights_dir"]
         self.disabled_layers = config.raw_config["strategy"]["initial_fallback_layers"] + config.raw_config["disable_names"]
-        self.device = self._normalize_device(self.quant_config['device'], self.quant_config['visible_devices'])
+        self.device = self.quant_config['device']
         self.visible_devices = self.quant_config['visible_devices']
 
     
@@ -169,7 +169,7 @@ class ModelOptimizerQuantizer():
             tokenizer=tokenizer,
             batch_size=self.quant_config["batch_size"],
             num_samples=self.quant_config["calib_samples"],
-            device=self.device,
+            device=self._normalize_device(self.device, self.visible_devices),
             include_labels=True
         )
         quantization_formats = [mtq.INT8_DEFAULT_CFG]
@@ -228,7 +228,7 @@ class ModelOptimizerQuantizer():
             model_path,
             trust_remote_code=True,
             torch_dtype="auto",
-            device_map=self.device,
+            device_map=self._normalize_device(self.device, self.visible_devices),
         )
         model.eval()
 
