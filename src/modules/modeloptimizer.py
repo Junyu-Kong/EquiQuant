@@ -37,7 +37,9 @@ class ModelOptimizerQuantizer():
         """
         执行完整的量化流程。
         """
-        best_recipe = self._get_best_config()["recipe"]
+        best_recipe = self._get_best_config()
+        cleanup_memory()
+        
         w8a8_default = []
         for key, value in best_recipe.items():
             layer_name = "*" + ".".join(key.split(".")[:-1]) + "*"
@@ -208,11 +210,7 @@ class ModelOptimizerQuantizer():
         # Disable all quantizers; AutoQuantize will enable the needed ones
         set_quantizer_by_cfg(model, {"*": {"enable": False}})
 
-        result =  searcher.search(model, {"effective_bits": self.quant_config["effective_bits"]}, config=search_config)
-        del model
-        cleanup_memory()
-
-        return result
+        return searcher.search(model, {"effective_bits": self.quant_config["effective_bits"]}, config=search_config)["recipe"]
 
     def _normalize_device(self, device: str, visible_devices: str) -> str:
         if device == "cpu":
