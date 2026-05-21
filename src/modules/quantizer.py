@@ -588,11 +588,11 @@ class LLMCompressorQuantizer(BaseQuantizer):
             ]
         )
 
-        if self.config.get("enable_smoothquant", False):
+        if self.config.get("enable_smooth_quant", False):
             smoothing_strength = self.config.get("smoothing_strength", 0.8)
             script_lines.extend(
                 [
-                    f"recipe.append(SmoothQuantModifier(smoothing_strength={smoothing_strength}))",
+                    f"recipe += '        SmoothQuantModifier(smoothing_strength={smoothing_strength}))'",
                     "",
                 ]
             )
